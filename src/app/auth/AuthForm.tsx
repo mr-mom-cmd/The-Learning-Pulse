@@ -46,6 +46,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
           role: "user",
         });
         toast.success("Account created!");
+        router.refresh();
         router.push(redirect);
       }
     } else {
@@ -61,6 +62,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       }
 
       toast.success("Welcome back!");
+      router.refresh();
       router.push(redirect);
     }
     setLoading(false);
