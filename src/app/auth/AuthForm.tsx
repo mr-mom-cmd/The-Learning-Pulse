@@ -25,47 +25,62 @@ export default function AuthForm({ mode }: AuthFormProps) {
     e.preventDefault();
     setLoading(true);
 
-    if (mode === "signup") {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { name } },
-      });
-
-      if (error) {
-        toast.error(error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data.user) {
-        await supabase.from("users").upsert({
-          id: data.user.id,
+    try {
+      if (mode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
           email,
-          name,
-          role: "user",
+          password,
+          options: { data: { name } },
         });
-        toast.success("Account created!");
+
+        if (error) {
+          toast.error(error.message);
+          setLoading(false);
+          return;
+        }
+
+        if (data.user && !data.user.identities?.length) {
+          toast.error("An account with this email already exists.");
+          setLoading(false);
+          return;
+        }
+
+        if (data.session) {
+          if (data.user) {
+            await supabase.from("users").upsert({
+              id: data.user.id,
+              email,
+              name,
+              role: "user",
+            });
+          }
+          toast.success("Account created!");
+          router.refresh();
+          router.push(redirect);
+        } else {
+          toast.success("Check your email to confirm your account.");
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          toast.error(error.message);
+          setLoading(false);
+          return;
+        }
+
+        toast.success("Welcome back!");
         router.refresh();
         router.push(redirect);
       }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        toast.error(error.message);
-        setLoading(false);
-        return;
-      }
-
-      toast.success("Welcome back!");
-      router.refresh();
-      router.push(redirect);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleGoogleAuth = async () => {
